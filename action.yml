@@ -1,0 +1,74 @@
+name: Checkout Git LFS
+description: >-
+  Check out a repository and pull Git LFS objects from the server configured
+  in its .lfsconfig, authenticating with a PAT if provided or a GitHub OIDC
+  token otherwise.
+
+branding:
+  icon: download-cloud
+  color: orange
+
+inputs:
+  lfs-pat:
+    description: >-
+      Token for the LFS server, sent as basic-auth password with username
+      "pat". When empty, falls back to minting a GitHub OIDC token with the LFS
+      host as audience, which requires `id-token: write` permission on the
+      calling job.
+    required: false
+    default: ''
+  repository:
+    description: Repository to check out, owner/name. Defaults to the repository running the workflow.
+    required: false
+    default: ''
+  ref:
+    description: Branch, tag, or SHA to check out. Defaults to the triggering ref, or the default branch when `repository` is another repo.
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    # Deliberately not using `lfs: true`: checkout fetches LFS objects before
+    # the working tree exists, so .lfsconfig (which points at the custom LFS
+    # server) is never read and the fetch 404s against github.com's endpoint.
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        repository: ${{ inputs.repository || github.repository }}
+        ref: ${{ inputs.ref }}
+        persist-credentials: false
+
+    # The LFS host is derived from .lfsconfig. The credential helper
+    # references $LFS_TOKEN rather than embedding the token, and is passed
+    # per-invocation via `git -c`, so the token never lands in .git/config and
+    # is gone when this step ends.
+    - name: Pull LFS objects
+      shell: bash
+      env:
+        LFS_TOKEN: ${{ inputs.lfs-pat }}
+      run: |
+        set -euo pipefail
+        if [[ ! -f .lfsconfig ]]; then
+          echo "::error::.lfsconfig not found in the repository root — this action only supports repos with a custom LFS server; use actions/checkout with \`lfs: true\` for github.com-hosted LFS"
+          exit 1
+        fi
+        LFS_URL=$(git config --file .lfsconfig lfs.url)
+        LFS_HOST=${LFS_URL#*://}
+        LFS_HOST=${LFS_HOST%%/*}
+        if [[ -n "$LFS_TOKEN" ]]; then
+          echo "Authenticating to $LFS_HOST with PAT"
+          LFS_USER=pat
+        else
+          echo "lfs-pat input not set, authenticating to $LFS_HOST with OIDC"
+          if [[ -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]]; then
+            echo "::error::OIDC fallback requires \`id-token: write\` permission on the calling job"
+            exit 1
+          fi
+          LFS_TOKEN=$(curl -sSf -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$LFS_HOST" | jq -r .value)
+          echo "::add-mask::$LFS_TOKEN"
+          LFS_USER=oidc
+        fi
+        export LFS_TOKEN
+        git -c "credential.https://$LFS_HOST.helper=!f() { echo username=$LFS_USER; echo password=\$LFS_TOKEN; };f" \
+          lfs pull

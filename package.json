@@ -1,0 +1,49 @@
+{
+	"name": "github-action-checkout-git-lfs-cf",
+	"version": "0.0.0",
+	"private": true,
+	"description": "GitHub Action to check out repos and smudge Git LFS files hosted by a git-lfs-cf server.",
+	"keywords": [
+		"github-action",
+		"action",
+		"git",
+		"lfs",
+		"git-lfs",
+		"github",
+		"cloudflare",
+		"workers",
+		"r2",
+		"s3"
+	],
+	"homepage": "https://github.com/kitschpatrol/github-action-checkout-git-lfs-cf",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/kitschpatrol/github-action-checkout-git-lfs-cf.git"
+	},
+	"license": "MIT",
+	"author": {
+		"name": "Eric Mika",
+		"email": "eric@ericmika.com",
+		"url": "https://ericmika.com"
+	},
+	"type": "module",
+	"scripts": {
+		"build": "echo 'No build necessary'",
+		"clean": "shx rm -f pnpm-lock.yaml && git clean -fdX -e !.claude/",
+		"fix": "ksc fix --skip eslint knip stylelint typescript",
+		"lint": "ksc lint --skip eslint knip stylelint typescript",
+		"test": "echo 'No tests specified'",
+		"updatetag": "git tag -d v1 && git push origin :v1 && git tag -a v1 -m '' && git push origin v1"
+	},
+	"devDependencies": {
+		"@kitschpatrol/shared-config": "^8.6.0",
+		"shx": "^0.4.0"
+	},
+	"packageManager": "pnpm@11.1.2",
+	"devEngines": {
+		"runtime": {
+			"name": "node",
+			"version": ">=24.16.0"
+		}
+	}
+}
