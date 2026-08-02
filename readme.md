@@ -16,16 +16,18 @@ permissions:
 steps:
   - uses: kitschpatrol/github-action-checkout-git-lfs-cf@v1
     with:
-      lfs-pat: ${{ secrets.LFS_PAT }} # omit to use OIDC
+      lfs-pat: ${{ secrets.LFS_PAT }} # omit both to use OIDC
+      lfs-host: lfs.example.com # required with lfs-pat
 ```
 
 ## Inputs
 
-| input        | default        | description                                                                                                            |
-| ------------ | -------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `lfs-pat`    | _none_         | Token for the LFS server, sent as basic-auth password with username `pat`. When empty, falls back to OIDC (see below). |
-| `repository` | current repo   | Repository to check out, `owner/name`.                                                                                 |
-| `ref`        | triggering ref | Branch, tag, or SHA to check out.                                                                                      |
+| input        | default        | description                                                                                                              |
+| ------------ | -------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `lfs-pat`    | _none_         | Token for the LFS server, sent as basic-auth password with username `pat`. When empty, falls back to OIDC (see below).   |
+| `lfs-host`   | _none_         | Expected LFS server hostname, e.g. `lfs.example.com`. Required with `lfs-pat`; refused if `.lfsconfig` points elsewhere. |
+| `repository` | current repo   | Repository to check out, `owner/name`.                                                                                   |
+| `ref`        | triggering ref | Branch, tag, or SHA to check out.                                                                                        |
 
 ## Authentication
 
@@ -33,6 +35,8 @@ steps:
 - **OIDC fallback** — when `lfs-pat` is empty, the action mints a GitHub Actions OIDC token with the LFS host as `audience` and sends it as basic auth (`oidc:<token>`). The calling job must grant `id-token: write`, and the LFS server must validate GitHub's OIDC issuer (`https://token.actions.githubusercontent.com`) and the expected audience.
 
 The token is held only in the pull step's environment and passed to git via a per-invocation credential helper (`git -c`) — it is never written to `.git/config` or any other file.
+
+Why `lfs-host` is required with a PAT: the transfer host is read from the checked-out `.lfsconfig`, so on an untrusted ref a tampered file could redirect the credential to an attacker's server. Pinning the hostname in the workflow — which the checked-out ref can't modify — makes the action refuse the mismatch instead. OIDC needs no pin: its tokens are audience-bound to the host they were minted for and useless anywhere else.
 
 ## Requirements
 

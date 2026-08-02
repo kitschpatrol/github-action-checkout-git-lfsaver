@@ -17,6 +17,16 @@ inputs:
       calling job.
     required: false
     default: ''
+  lfs-host:
+    description: >-
+      Expected LFS server hostname, e.g. "lfs.example.com". Required when
+      `lfs-pat` is set: the transfer host is read from the checked-out
+      .lfsconfig, which on an untrusted ref could be tampered with to redirect
+      the credential — pinning the hostname here refuses the mismatch. Optional
+      with OIDC, whose tokens are audience-bound to the host they were minted
+      for and useless elsewhere.
+    required: false
+    default: ''
   repository:
     description: Repository to check out, owner/name. Defaults to the repository running the workflow.
     required: false
@@ -46,6 +56,7 @@ runs:
       shell: bash
       env:
         LFS_TOKEN: ${{ inputs.lfs-pat }}
+        EXPECTED_LFS_HOST: ${{ inputs.lfs-host }}
       run: |
         set -euo pipefail
         if [[ ! -f .lfsconfig ]]; then
@@ -53,8 +64,26 @@ runs:
           exit 1
         fi
         LFS_URL=$(git config --file .lfsconfig lfs.url)
+        if [[ "$LFS_URL" != https://* ]]; then
+          echo "::error::lfs.url in .lfsconfig must be an https:// URL, got \"$LFS_URL\""
+          exit 1
+        fi
         LFS_HOST=${LFS_URL#*://}
         LFS_HOST=${LFS_HOST%%/*}
+        LFS_HOST=$(printf '%s' "$LFS_HOST" | tr '[:upper:]' '[:lower:]')
+        # The host above comes from repository content, so a credential must
+        # only be sent to a host the workflow itself pinned via lfs-host
+        EXPECTED_HOST=${EXPECTED_LFS_HOST#https://}
+        EXPECTED_HOST=${EXPECTED_HOST%%/*}
+        EXPECTED_HOST=$(printf '%s' "$EXPECTED_HOST" | tr '[:upper:]' '[:lower:]')
+        if [[ -n "$LFS_TOKEN" && -z "$EXPECTED_HOST" ]]; then
+          echo "::error::lfs-host is required when lfs-pat is set — it pins the host the credential may be sent to, so a tampered .lfsconfig can't redirect it"
+          exit 1
+        fi
+        if [[ -n "$EXPECTED_HOST" && "$LFS_HOST" != "$EXPECTED_HOST" ]]; then
+          echo "::error::.lfsconfig points at \"$LFS_HOST\" but the workflow pins lfs-host to \"$EXPECTED_HOST\" — refusing to authenticate against an unexpected host"
+          exit 1
+        fi
         if [[ -n "$LFS_TOKEN" ]]; then
           echo "Authenticating to $LFS_HOST with PAT"
           LFS_USER=pat
