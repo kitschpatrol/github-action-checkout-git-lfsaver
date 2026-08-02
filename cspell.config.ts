@@ -1,3 +1,3 @@
 import { cspellConfig } from '@kitschpatrol/cspell-config'
 
-export default cspellConfig({ words: ['pipefail'] })
+export default cspellConfig({ words: ['lfsaver', 'pipefail'] })

@@ -1,8 +1,8 @@
 {
-	"name": "github-action-checkout-git-lfs-cf",
+	"name": "github-action-checkout-git-lfsaver",
 	"version": "0.0.0",
 	"private": true,
-	"description": "GitHub Action to check out repos and smudge Git LFS files hosted by a git-lfs-cf server.",
+	"description": "GitHub Action to check out repos and smudge Git LFS files hosted by a git-lfsaver server.",
 	"keywords": [
 		"github-action",
 		"action",
@@ -15,10 +15,10 @@
 		"r2",
 		"s3"
 	],
-	"homepage": "https://github.com/kitschpatrol/github-action-checkout-git-lfs-cf",
+	"homepage": "https://github.com/kitschpatrol/github-action-checkout-git-lfsaver",
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/kitschpatrol/github-action-checkout-git-lfs-cf.git"
+		"url": "git+https://github.com/kitschpatrol/github-action-checkout-git-lfsaver.git"
 	},
 	"license": "MIT",
 	"author": {
