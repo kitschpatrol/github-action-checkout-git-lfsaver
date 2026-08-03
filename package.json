@@ -32,11 +32,12 @@
 		"clean": "shx rm -f pnpm-lock.yaml && git clean -fdX -e !.claude/",
 		"fix": "ksc fix --skip eslint knip stylelint typescript",
 		"lint": "ksc lint --skip eslint knip stylelint typescript",
-		"test": "echo 'No tests specified'",
-		"updatetag": "git tag -d v1 && git push origin :v1 && git tag -a v1 -m '' && git push origin v1"
+		"release": "bumpp --commit 'Release: %s' && ./scripts/sync-major-tag.sh",
+		"test": "echo 'No tests specified'"
 	},
 	"devDependencies": {
 		"@kitschpatrol/shared-config": "^8.6.0",
+		"bumpp": "^12.1.1",
 		"shx": "^0.4.0"
 	},
 	"packageManager": "pnpm@11.17.0",
