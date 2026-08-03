@@ -1,8 +1,8 @@
 name: Checkout Git LFS
 description: >-
   Check out a repository and pull Git LFS objects from the server configured
-  in its .lfsconfig, authenticating with a PAT if provided or a GitHub OIDC
-  token otherwise.
+  in its .lfsconfig, authenticating with a token if provided, a GitHub OIDC
+  token when available, or anonymously for public repos.
 
 branding:
   icon: download-cloud
@@ -11,10 +11,12 @@ branding:
 inputs:
   lfs-pat:
     description: >-
-      Token for the LFS server, sent as basic-auth password with username
-      "pat". When empty, falls back to minting a GitHub OIDC token with the LFS
-      host as audience, which requires `id-token: write` permission on the
-      calling job.
+      Credential for the LFS server, sent as the basic-auth password: a GitHub
+      personal access token or a self-issued token minted by the server
+      operator. When empty, falls back to minting a GitHub OIDC token with the
+      LFS host as audience (requires `id-token: write` permission on the
+      calling job), and failing that to an anonymous pull, which the server
+      allows for public repos only.
     required: false
     default: ''
   lfs-host:
@@ -63,7 +65,10 @@ runs:
           echo "::error::.lfsconfig not found in the repository root — this action only supports repos with a custom LFS server; use actions/checkout with \`lfs: true\` for github.com-hosted LFS"
           exit 1
         fi
-        LFS_URL=$(git config --file .lfsconfig lfs.url)
+        if ! LFS_URL=$(git config --file .lfsconfig lfs.url); then
+          echo "::error::.lfsconfig has no lfs.url value — expected \"url = https://<lfs-host>/<path>\" in an [lfs] section"
+          exit 1
+        fi
         if [[ "$LFS_URL" != https://* ]]; then
           echo "::error::lfs.url in .lfsconfig must be an https:// URL, got \"$LFS_URL\""
           exit 1
@@ -85,18 +90,21 @@ runs:
           exit 1
         fi
         if [[ -n "$LFS_TOKEN" ]]; then
-          echo "Authenticating to $LFS_HOST with PAT"
+          echo "Authenticating to $LFS_HOST with the lfs-pat token"
           LFS_USER=pat
-        else
+        elif [[ -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]]; then
           echo "lfs-pat input not set, authenticating to $LFS_HOST with OIDC"
-          if [[ -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]]; then
-            echo "::error::OIDC fallback requires \`id-token: write\` permission on the calling job"
-            exit 1
-          fi
           LFS_TOKEN=$(curl -sSf -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
             "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$LFS_HOST" | jq -r .value)
           echo "::add-mask::$LFS_TOKEN"
           LFS_USER=oidc
+        else
+          # The server allows anonymous downloads from public repos, so a
+          # missing credential is a notice rather than an error — this keeps
+          # fork PRs, which can never obtain an OIDC token, working
+          echo "::notice::No lfs-pat set and no OIDC token available — pulling from $LFS_HOST anonymously, which the server allows for public repos only. For private repos, grant \`id-token: write\` on this job or set \`lfs-pat\`."
+          GIT_TERMINAL_PROMPT=0 git lfs pull
+          exit 0
         fi
         export LFS_TOKEN
         git -c "credential.https://$LFS_HOST.helper=!f() { echo username=$LFS_USER; echo password=\$LFS_TOKEN; };f" \
