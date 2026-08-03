@@ -39,7 +39,7 @@
 		"@kitschpatrol/shared-config": "^8.6.0",
 		"shx": "^0.4.0"
 	},
-	"packageManager": "pnpm@11.1.2",
+	"packageManager": "pnpm@11.17.0",
 	"devEngines": {
 		"runtime": {
 			"name": "node",
