@@ -40,7 +40,7 @@ With a token, pinning the LFS host:
 steps:
   - uses: kitschpatrol/github-action-checkout-git-lfsaver@v1
     with:
-      lfs-pat: ${{ secrets.LFS_TOKEN }}
+      lfs-token: ${{ secrets.LFS_TOKEN }}
       lfs-host: lfs.example.com
 ```
 
@@ -51,12 +51,12 @@ steps:
 
 ## Inputs
 
-| input        | default        | description                                                                                                                                         |
-| ------------ | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `lfs-pat`    | _none_         | Credential for the LFS server: a GitHub personal access token or a self-issued token. When empty, falls back to OIDC, then anonymous (see below).   |
-| `lfs-host`   | _none_         | Expected LFS server hostname, e.g. `lfs.example.com`. Required with `lfs-pat`; the action refuses to authenticate if `.lfsconfig` points elsewhere. |
-| `repository` | current repo   | Repository to check out, `owner/name`.                                                                                                              |
-| `ref`        | triggering ref | Branch, tag, or SHA to check out. When `repository` is another repo, defaults to that repo's default branch instead.                                |
+| input        | default        | description                                                                                                                                           |
+| ------------ | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lfs-token`  | _none_         | Credential for the LFS server: a GitHub personal access token or a self-issued token. When empty, falls back to OIDC, then anonymous (see below).     |
+| `lfs-host`   | _none_         | Expected LFS server hostname, e.g. `lfs.example.com`. Required with `lfs-token`; the action refuses to authenticate if `.lfsconfig` points elsewhere. |
+| `repository` | current repo   | Repository to check out, `owner/name`.                                                                                                                |
+| `ref`        | triggering ref | Branch, tag, or SHA to check out. When `repository` is another repo, defaults to that repo's default branch instead.                                  |
 
 Only the `repository` and `ref` inputs from `actions/checkout` are supported. If you need others (`fetch-depth`, `submodules`, `path`, …), [open an issue](https://github.com/kitschpatrol/github-action-checkout-git-lfsaver/issues).
 
@@ -64,21 +64,21 @@ Only the `repository` and `ref` inputs from `actions/checkout` are supported. If
 
 The action picks one of three strategies, in order:
 
-### Token (`lfs-pat`)
+### Token (`lfs-token`)
 
-When `lfs-pat` is set, it's sent as the Basic auth password. The server detects the credential type from its shape, so this works with a GitHub personal access token (fine-grained tokens can be scoped to a single repo) or a [self-issued token](https://github.com/kitschpatrol/git-lfsaver#self-issued-tokens) minted by the server operator.
+When `lfs-token` is set, it's sent as the Basic auth password. The server detects the credential type from its shape, so this works with a GitHub personal access token (fine-grained tokens can be scoped to a single repo) or a [self-issued token](https://github.com/kitschpatrol/git-lfsaver#self-issued-tokens) minted by the server operator.
 
 Why `lfs-host` is required with a token: the transfer host is read from the checked-out `.lfsconfig`, so on an untrusted ref a tampered file could redirect the credential to an attacker's server. Pinning the hostname in the workflow — which the checked-out ref can't modify — makes the action refuse the mismatch instead.
 
 ### OIDC
 
-When `lfs-pat` is empty and the job grants `id-token: write`, the action mints a short-lived GitHub Actions OIDC token with the LFS host as `audience` and sends it as the Basic auth password. No secrets are stored, and the server verifies the token against GitHub's public keys — its cryptographically verified `repository` claim must match the repo in the LFS URL, and it's download-only by design. No `lfs-host` pin is needed: OIDC tokens are audience-bound to the host they were minted for and useless elsewhere.
+When `lfs-token` is empty and the job grants `id-token: write`, the action mints a short-lived GitHub Actions OIDC token with the LFS host as `audience` and sends it as the Basic auth password. No secrets are stored, and the server verifies the token against GitHub's public keys — its cryptographically verified `repository` claim must match the repo in the LFS URL, and it's download-only by design. No `lfs-host` pin is needed: OIDC tokens are audience-bound to the host they were minted for and useless elsewhere.
 
 The token is held only in the pull step's environment and passed to git via a per-invocation credential helper (`git -c`) — it is never written to `.git/config` or any other file.
 
 ### Anonymous (public repos)
 
-With no `lfs-pat` and no OIDC token available, the action pulls without a credential, which the server allows for downloads from public GitHub repos. This is what keeps fork PRs working: forks never receive `id-token: write`, so on public repos the action falls back to an anonymous pull instead of failing.
+With no `lfs-token` and no OIDC token available, the action pulls without a credential, which the server allows for downloads from public GitHub repos. This is what keeps fork PRs working: forks never receive `id-token: write`, so on public repos the action falls back to an anonymous pull instead of failing.
 
 <!-- license -->
 

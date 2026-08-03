@@ -9,7 +9,7 @@ branding:
   color: orange
 
 inputs:
-  lfs-pat:
+  lfs-token:
     description: >-
       Credential for the LFS server, sent as the basic-auth password: a GitHub
       personal access token or a self-issued token minted by the server
@@ -22,7 +22,7 @@ inputs:
   lfs-host:
     description: >-
       Expected LFS server hostname, e.g. "lfs.example.com". Required when
-      `lfs-pat` is set: the transfer host is read from the checked-out
+      `lfs-token` is set: the transfer host is read from the checked-out
       .lfsconfig, which on an untrusted ref could be tampered with to redirect
       the credential — pinning the hostname here refuses the mismatch. Optional
       with OIDC, whose tokens are audience-bound to the host they were minted
@@ -57,7 +57,7 @@ runs:
     - name: Pull LFS objects
       shell: bash
       env:
-        LFS_TOKEN: ${{ inputs.lfs-pat }}
+        LFS_TOKEN: ${{ inputs.lfs-token }}
         EXPECTED_LFS_HOST: ${{ inputs.lfs-host }}
       run: |
         set -euo pipefail
@@ -82,7 +82,7 @@ runs:
         EXPECTED_HOST=${EXPECTED_HOST%%/*}
         EXPECTED_HOST=$(printf '%s' "$EXPECTED_HOST" | tr '[:upper:]' '[:lower:]')
         if [[ -n "$LFS_TOKEN" && -z "$EXPECTED_HOST" ]]; then
-          echo "::error::lfs-host is required when lfs-pat is set — it pins the host the credential may be sent to, so a tampered .lfsconfig can't redirect it"
+          echo "::error::lfs-host is required when lfs-token is set — it pins the host the credential may be sent to, so a tampered .lfsconfig can't redirect it"
           exit 1
         fi
         if [[ -n "$EXPECTED_HOST" && "$LFS_HOST" != "$EXPECTED_HOST" ]]; then
@@ -90,10 +90,10 @@ runs:
           exit 1
         fi
         if [[ -n "$LFS_TOKEN" ]]; then
-          echo "Authenticating to $LFS_HOST with the lfs-pat token"
-          LFS_USER=pat
+          echo "Authenticating to $LFS_HOST with the lfs-token credential"
+          LFS_USER=token
         elif [[ -n "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]]; then
-          echo "lfs-pat input not set, authenticating to $LFS_HOST with OIDC"
+          echo "lfs-token input not set, authenticating to $LFS_HOST with OIDC"
           LFS_TOKEN=$(curl -sSf -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
             "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=$LFS_HOST" | jq -r .value)
           echo "::add-mask::$LFS_TOKEN"
@@ -102,7 +102,7 @@ runs:
           # The server allows anonymous downloads from public repos, so a
           # missing credential is a notice rather than an error — this keeps
           # fork PRs, which can never obtain an OIDC token, working
-          echo "::notice::No lfs-pat set and no OIDC token available — pulling from $LFS_HOST anonymously, which the server allows for public repos only. For private repos, grant \`id-token: write\` on this job or set \`lfs-pat\`."
+          echo "::notice::No lfs-token set and no OIDC token available — pulling from $LFS_HOST anonymously, which the server allows for public repos only. For private repos, grant \`id-token: write\` on this job or set \`lfs-token\`."
           GIT_TERMINAL_PROMPT=0 git lfs pull
           exit 0
         fi
