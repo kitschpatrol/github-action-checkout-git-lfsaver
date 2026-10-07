@@ -1,6 +1,6 @@
 {
 	"name": "github-action-checkout-git-lfsaver",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"private": true,
 	"description": "GitHub Action to check out repos and smudge Git LFS files hosted by a git-lfsaver server.",
 	"keywords": [
