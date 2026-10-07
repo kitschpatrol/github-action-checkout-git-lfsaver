@@ -26,22 +26,37 @@ The `lfs` input on `actions/checkout` runs the LFS fetch before the working tree
 With OIDC authentication (recommended):
 
 ```yaml
+on:
+  push: {}
+
 permissions:
   contents: read
   id-token: write
 
-steps:
-  - uses: kitschpatrol/github-action-checkout-git-lfsaver@v1
+jobs:
+  lfs-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: kitschpatrol/github-action-checkout-git-lfsaver@v1
 ```
 
 With a token, pinning the LFS host:
 
 ```yaml
-steps:
-  - uses: kitschpatrol/github-action-checkout-git-lfsaver@v1
-    with:
-      lfs-token: ${{ secrets.LFS_TOKEN }}
-      lfs-host: lfs.example.com
+on:
+  push: {}
+
+permissions:
+  contents: read
+
+jobs:
+  lfs-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: kitschpatrol/github-action-checkout-git-lfsaver@v1
+        with:
+          lfs-token: ${{ secrets.LFS_TOKEN }}
+          lfs-host: lfs.example.com
 ```
 
 ## Requirements
