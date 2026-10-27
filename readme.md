@@ -1,9 +1,10 @@
 # kitschpatrol/github-action-checkout-git-lfsaver
 
-<!-- badges -->
+<!-- badges({ githubRelease: true }) -->
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/license/mit)
 [![CI](https://github.com/kitschpatrol/github-action-checkout-git-lfsaver/actions/workflows/ci.yml/badge.svg)](https://github.com/kitschpatrol/github-action-checkout-git-lfsaver/actions/workflows/ci.yml)
+[![GitHub Release](https://img.shields.io/github/v/release/kitschpatrol/github-action-checkout-git-lfsaver?label=Release)](https://github.com/kitschpatrol/github-action-checkout-git-lfsaver/releases/latest)
 
 <!-- /badges -->
 
