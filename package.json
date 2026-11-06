@@ -32,10 +32,11 @@
 		"clean-deep": "shx rm -f pnpm-lock.yaml && git clean -fdX",
 		"fix": "ksc fix --skip eslint knip stylelint typescript",
 		"lint": "ksc lint --skip eslint knip stylelint typescript",
-		"release": "bumpp --commit 'Release: %s' && ./scripts/sync-major-tag.sh",
+		"release": "bumpp --commit 'Release: %s' --all --execute 'chagent' && ./scripts/sync-major-tag.sh",
 		"test": "echo 'No tests specified'"
 	},
 	"devDependencies": {
+		"@kitschpatrol/chagent": "0.4.0",
 		"@kitschpatrol/shared-config": "^8.14.0",
 		"bumpp": "^12.3.0",
 		"shx": "^0.4.0"
